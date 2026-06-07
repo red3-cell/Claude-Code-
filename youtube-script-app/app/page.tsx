@@ -227,41 +227,51 @@ export default function Home() {
               </ol>
             </Section>
 
-            <Section title="🖼 Midjourneyプロンプト（サムネイル画像用・英語4パターン）">
-              <div className="space-y-3">
-                {result.midjourneyPrompts.map((p, i) => (
-                  <div key={i} className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                    <span className="text-xs font-semibold text-purple-600 block mb-1">Pattern {i + 1}</span>
-                    <p className="text-sm text-gray-800 font-mono break-all">{p}</p>
-                  </div>
-                ))}
-              </div>
-            </Section>
-
-            <Section title="🎵 SUNO BGMプロンプト（英語）">
-              <div className="space-y-3">
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                  <span className="text-xs font-semibold text-orange-600 block mb-1">Opening（オープニング）</span>
-                  <p className="text-sm text-gray-800 font-mono break-all">{result.sunoPrompts.opening}</p>
+            {result.midjourneyPrompts && result.midjourneyPrompts.length > 0 && (
+              <Section title="🖼 Midjourneyプロンプト（サムネイル画像用・英語4パターン）">
+                <div className="space-y-3">
+                  {result.midjourneyPrompts.map((p, i) => (
+                    <div key={i} className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                      <span className="text-xs font-semibold text-purple-600 block mb-1">Pattern {i + 1}</span>
+                      <p className="text-sm text-gray-800 font-mono break-all">{p}</p>
+                    </div>
+                  ))}
                 </div>
-                {result.sunoPrompts.body.map((b, i) => (
-                  <div key={i} className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                    <span className="text-xs font-semibold text-orange-600 block mb-1">Body BGM {i + 1}（本編BGM {i + 1}）</span>
-                    <p className="text-sm text-gray-800 font-mono break-all">{b}</p>
-                  </div>
-                ))}
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                  <span className="text-xs font-semibold text-orange-600 block mb-1">Ending（エンディング）</span>
-                  <p className="text-sm text-gray-800 font-mono break-all">{result.sunoPrompts.ending}</p>
-                </div>
-              </div>
-            </Section>
+              </Section>
+            )}
 
-            <Section title="📄 YouTube動画説明欄">
-              <pre className="whitespace-pre-wrap text-sm text-gray-800 leading-relaxed font-sans">
-                {result.description}
-              </pre>
-            </Section>
+            {result.sunoPrompts && (
+              <Section title="🎵 SUNO BGMプロンプト（英語）">
+                <div className="space-y-3">
+                  {result.sunoPrompts.opening && (
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                      <span className="text-xs font-semibold text-orange-600 block mb-1">Opening（オープニング）</span>
+                      <p className="text-sm text-gray-800 font-mono break-all">{result.sunoPrompts.opening}</p>
+                    </div>
+                  )}
+                  {(result.sunoPrompts.body ?? []).map((b, i) => (
+                    <div key={i} className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                      <span className="text-xs font-semibold text-orange-600 block mb-1">Body BGM {i + 1}（本編BGM {i + 1}）</span>
+                      <p className="text-sm text-gray-800 font-mono break-all">{b}</p>
+                    </div>
+                  ))}
+                  {result.sunoPrompts.ending && (
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                      <span className="text-xs font-semibold text-orange-600 block mb-1">Ending（エンディング）</span>
+                      <p className="text-sm text-gray-800 font-mono break-all">{result.sunoPrompts.ending}</p>
+                    </div>
+                  )}
+                </div>
+              </Section>
+            )}
+
+            {result.description && (
+              <Section title="📄 YouTube動画説明欄">
+                <pre className="whitespace-pre-wrap text-sm text-gray-800 leading-relaxed font-sans">
+                  {result.description}
+                </pre>
+              </Section>
+            )}
           </div>
         )}
       </main>

@@ -94,7 +94,20 @@ ${transcript ? `【参考動画の文字起こし】\n${transcript}\n` : ""}
                       content.text.match(/```\n([\s\S]*?)\n```/);
     const jsonText = jsonMatch ? jsonMatch[1] : content.text;
 
-    const result = JSON.parse(jsonText);
+    let result;
+    try {
+      result = JSON.parse(jsonText);
+    } catch (parseErr) {
+      console.error("JSON parse error:", parseErr);
+      console.error("Raw text (first 500):", content.text.slice(0, 500));
+      return NextResponse.json({ error: "JSONの解析に失敗しました。再度お試しください。" }, { status: 500 });
+    }
+
+    // Ensure required fields exist
+    if (!result.midjourneyPrompts) result.midjourneyPrompts = [];
+    if (!result.sunoPrompts) result.sunoPrompts = { opening: "", body: [], ending: "" };
+    if (!result.description) result.description = "";
+
     return NextResponse.json(result);
   } catch (error) {
     console.error(error);
