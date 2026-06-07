@@ -33,6 +33,9 @@ export default function Home() {
   const [error, setError] = useState("");
   const [copiedScript, setCopiedScript] = useState(false);
   const [copiedAll, setCopiedAll] = useState(false);
+  const [copiedMidjourney, setCopiedMidjourney] = useState(false);
+  const [copiedSuno, setCopiedSuno] = useState(false);
+  const [copiedDesc, setCopiedDesc] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -67,6 +70,27 @@ export default function Home() {
     await navigator.clipboard.writeText(buildAllText(result));
     setCopiedAll(true);
     setTimeout(() => setCopiedAll(false), 2000);
+  }
+
+  async function handleCopyMidjourney() {
+    if (!result) return;
+    await navigator.clipboard.writeText(result.midjourneyPrompts.map((p, i) => `Pattern ${i + 1}: ${p}`).join("\n\n"));
+    setCopiedMidjourney(true);
+    setTimeout(() => setCopiedMidjourney(false), 2000);
+  }
+
+  async function handleCopySuno() {
+    if (!result) return;
+    await navigator.clipboard.writeText(result.sunoPrompts.join("\n\n"));
+    setCopiedSuno(true);
+    setTimeout(() => setCopiedSuno(false), 2000);
+  }
+
+  async function handleCopyDesc() {
+    if (!result) return;
+    await navigator.clipboard.writeText(result.youtubeDescription);
+    setCopiedDesc(true);
+    setTimeout(() => setCopiedDesc(false), 2000);
   }
 
   return (
@@ -186,7 +210,14 @@ export default function Home() {
             </Card>
 
             {/* 3. Script */}
-            <Card title="📝 本編台本">
+            <Card
+              title="📝 本編台本"
+              action={
+                <button onClick={handleCopyScript} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3 py-1 rounded-lg transition-colors">
+                  {copiedScript ? "✅ コピー済み" : "📋 台本をコピー"}
+                </button>
+              }
+            >
               <pre className="whitespace-pre-wrap text-sm text-gray-800 leading-relaxed font-sans max-h-[600px] overflow-y-auto">
                 {result.script}
               </pre>
@@ -200,7 +231,14 @@ export default function Home() {
             </Card>
 
             {/* 5. Midjourney */}
-            <Card title="🖼 Midjourneyプロンプト（英語・4パターン）">
+            <Card
+              title="🖼 Midjourneyプロンプト（英語・4パターン）"
+              action={
+                <button onClick={handleCopyMidjourney} className="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 font-medium px-3 py-1 rounded-lg transition-colors">
+                  {copiedMidjourney ? "✅ コピー済み" : "📋 全プロンプトをコピー"}
+                </button>
+              }
+            >
               <div className="space-y-3">
                 {result.midjourneyPrompts.map((p, i) => (
                   <div key={i} className="bg-purple-50 border border-purple-200 rounded-lg p-3">
@@ -212,7 +250,14 @@ export default function Home() {
             </Card>
 
             {/* 6. SUNO */}
-            <Card title="🎵 SUNO BGMプロンプト（英語・6パターン）">
+            <Card
+              title="🎵 SUNO BGMプロンプト（英語・6パターン）"
+              action={
+                <button onClick={handleCopySuno} className="text-xs bg-orange-100 hover:bg-orange-200 text-orange-700 font-medium px-3 py-1 rounded-lg transition-colors">
+                  {copiedSuno ? "✅ コピー済み" : "📋 全プロンプトをコピー"}
+                </button>
+              }
+            >
               <div className="space-y-3">
                 {result.sunoPrompts.map((s, i) => (
                   <div key={i} className="bg-orange-50 border border-orange-200 rounded-lg p-3">
@@ -226,7 +271,14 @@ export default function Home() {
             </Card>
 
             {/* 7. YouTube description */}
-            <Card title="📄 YouTube動画説明欄">
+            <Card
+              title="📄 YouTube動画説明欄"
+              action={
+                <button onClick={handleCopyDesc} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3 py-1 rounded-lg transition-colors">
+                  {copiedDesc ? "✅ コピー済み" : "📋 コピー"}
+                </button>
+              }
+            >
               <pre className="whitespace-pre-wrap text-sm text-gray-800 leading-relaxed font-sans">
                 {result.youtubeDescription}
               </pre>
@@ -239,10 +291,13 @@ export default function Home() {
   );
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+function Card({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <h2 className="text-lg font-bold text-gray-900 mb-4">{title}</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+        {action}
+      </div>
       {children}
     </div>
   );
