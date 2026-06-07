@@ -3,6 +3,48 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+function buildPrompt(theme: string, reference: string, transcript: string): string {
+  const refSection = reference ? "\n\n[Reference material]\n" + reference : "";
+  const transcriptSection = transcript ? "\n\n[Reference transcript]\n" + transcript : "";
+
+  return (
+    "You are an expert YouTube script writer for a Japanese business channel.\n" +
+    "Target audience: Japanese professionals aged 20-50 who want to start their own business or advance their career.\n\n" +
+    "Video theme: " + theme + refSection + transcriptSection + "\n\n" +
+    "Output ONLY a valid JSON object (no markdown, no code fences, no explanation).\n" +
+    "The JSON must have exactly these fields:\n\n" +
+    "{\n" +
+    '  "titles": ["title1", "title2", "title3"],\n' +
+    '  "structureIntro": "description of intro section",\n' +
+    '  "structureBody": ["section1", "section2", "section3", "section4", "section5", "section6"],\n' +
+    '  "structureConclusion": "description of conclusion section",\n' +
+    '  "script": "FULL Japanese script in conversational style, minimum 10000 characters. Use natural spoken Japanese. Include specific episodes, numbers, examples. Address viewers directly.",\n' +
+    '  "catchcopies": ["catchcopy1", "catchcopy2", "catchcopy3"],\n' +
+    '  "midjourneyPrompts": [\n' +
+    '    "Pattern 1 photorealistic: professional business scene related to the theme, high contrast, space for text, 8k quality --ar 16:9 --v 6",\n' +
+    '    "Pattern 2 cinematic: dramatic cinematic shot with strong color grading related to the theme, moody lighting --ar 16:9 --v 6",\n' +
+    '    "Pattern 3 minimalist: clean flat design related to the theme, bold colors, simple shapes --ar 16:9 --v 6",\n' +
+    '    "Pattern 4 illustrated: vector art illustration related to the theme, vibrant colors, dynamic composition --ar 16:9 --v 6"\n' +
+    "  ],\n" +
+    '  "sunoPrompts": [\n' +
+    '    "OPENING: Genre: corporate pop; Tempo: 128 BPM; Mood: energetic, inspiring; Instruments: piano, synth, drums; Style: YouTube intro, 20-30 seconds",\n' +
+    '    "BODY BGM 1: Genre: ambient corporate; Tempo: 90 BPM; Mood: calm, focused; Instruments: soft piano, strings; Style: background for narration, 2-3 min loop",\n' +
+    '    "BODY BGM 2: Genre: motivational pop; Tempo: 110 BPM; Mood: uplifting, motivating; Instruments: acoustic guitar, light percussion; Style: inspiring background for key points",\n' +
+    '    "BODY BGM 3: Genre: corporate electronic; Tempo: 120 BPM; Mood: dynamic, intense; Instruments: synth bass, electronic drums; Style: energetic for climax section",\n' +
+    '    "BODY BGM 4: Genre: smooth jazz; Tempo: 95 BPM; Mood: confident, steady; Instruments: piano, bass, brushed drums; Style: professional feel for practical tips",\n' +
+    '    "ENDING: Genre: uplifting orchestral pop; Tempo: 100 BPM; Mood: satisfying, hopeful; Instruments: strings, piano; Style: warm outro, fade out 30-60 seconds"\n' +
+    "  ],\n" +
+    '  "youtubeDescription": "3-5 lines Japanese description with SEO keywords naturally included, brief summary of video content, end with a line encouraging channel subscription, include 3-5 hashtags"\n' +
+    "}\n\n" +
+    "IMPORTANT:\n" +
+    "- script must be at least 10000 Japanese characters\n" +
+    "- midjourneyPrompts must be exactly 4 items in English, replace the placeholder descriptions with actual content related to '" + theme + "'\n" +
+    "- sunoPrompts must be exactly 6 items in English\n" +
+    "- youtubeDescription must be in Japanese\n" +
+    "- Output ONLY the JSON object, nothing else"
+  );
+}
+
 export async function POST(req: NextRequest) {
   const { theme, reference, transcript } = await req.json();
 
@@ -10,107 +52,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "テーマを入力してください" }, { status: 400 });
   }
 
-  const prompt = `あなたはYouTubeチャンネル向けの動画台本を作成する専門家です。
-ターゲット視聴者は20代〜50代のビジネスパーソンで、独立・起業志望、または社内昇進を目指している向上心が高い人たちです。
+  const message = await client.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 20000,
+    messages: [{ role: "user", content: buildPrompt(theme, reference ?? "", transcript ?? "") }],
+  });
 
-以下の情報をもとに、20〜30分の動画台本を作成してください。
-
-【動画テーマ・タイトル案】
-${theme}
-
-${reference ? `【参考資料・記事本文】\n${reference}\n` : ""}
-${transcript ? `【参考動画の文字起こし】\n${transcript}\n` : ""}
-
-以下のJSON形式で出力してください。各フィールドの説明の通りに記入してください：
-
-\`\`\`json
-{
-  "titles": [
-    "タイトル案1（クリック率が高いキャッチーなタイトル）",
-    "タイトル案2（数字や具体性を含むタイトル）",
-    "タイトル案3（視聴者の悩みに刺さるタイトル）"
-  ],
-  "structure": {
-    "intro": "導入部の説明（視聴者を引き込む導入、問題提起、動画で得られる価値の提示）",
-    "body": [
-      "本編セクション1：タイトルと詳細な内容説明（具体的なエピソードや事例を含む）",
-      "本編セクション2：タイトルと詳細な内容説明",
-      "本編セクション3：タイトルと詳細な内容説明",
-      "本編セクション4：タイトルと詳細な内容説明",
-      "本編セクション5：タイトルと詳細な内容説明",
-      "本編セクション6：タイトルと詳細な内容説明"
-    ],
-    "conclusion": "まとめ部の説明（要点の整理、行動喚起、次回予告）"
-  },
-  "script": "ここに20〜30分相当の完全な台本を書いてください。話し言葉で自然な文体で、視聴者に語りかけるようなスタイルにしてください。導入から本編（6セクション）、まとめまで全て含めること。各セクションは具体的なエピソード・数字・事例を交えながら詳しく展開し、必ず10000文字以上の台本にしてください。改行を適切に使い読みやすくしてください。",
-  "catchcopies": [
-    "サムネイル用キャッチコピー1（短くインパクトのある言葉）",
-    "サムネイル用キャッチコピー2（数字や結果を示す言葉）",
-    "サムネイル用キャッチコピー3（問いかけや共感を呼ぶ言葉）"
-  ],
-  "midjourneyPrompts": [
-    "Pattern 1 (Photorealistic): [detailed English prompt for a photorealistic business thumbnail, specific scene, lighting, subject pose, text space], photorealistic, 8k, sharp focus, --ar 16:9 --v 6",
-    "Pattern 2 (Cinematic): [detailed English prompt for a cinematic dramatic style, strong color grading, wide shot or close-up], cinematic lighting, color graded, dramatic, --ar 16:9 --v 6",
-    "Pattern 3 (Minimalist): [detailed English prompt for a minimalist flat design thumbnail, clean background, bold graphic elements, strong typography space], minimalist, flat design, bold colors, clean, --ar 16:9 --v 6",
-    "Pattern 4 (Illustrated): [detailed English prompt for an illustrated or graphic novel style, vector-like, high contrast, eye-catching], graphic illustration, vector style, high contrast, vibrant, --ar 16:9 --v 6"
-  ],
-  "sunoPrompts": {
-    "opening": "Genre: [specific genre]; Tempo: [BPM]; Mood: [mood keywords]; Instruments: [instruments]; Style: energetic intro, builds excitement, 20-30 seconds, professional YouTube intro feel, [theme-specific descriptors]",
-    "body": [
-      "Genre: [genre]; Tempo: [BPM]; Mood: focused, calm, explanatory; Instruments: [soft instruments]; Style: background ambient, non-distracting, suitable for narration, corporate, 2-3 minutes loop",
-      "Genre: [genre]; Tempo: [BPM]; Mood: motivating, uplifting, mid-energy; Instruments: [instruments]; Style: slightly more dynamic, business motivation, inspirational, suitable for key points section",
-      "Genre: [genre]; Tempo: [BPM]; Mood: intense, engaging, forward-moving; Instruments: [instruments]; Style: energetic background, drives engagement, builds tension, suitable for climax section",
-      "Genre: [genre]; Tempo: [BPM]; Mood: confident, authoritative, clear; Instruments: [instruments]; Style: steady rhythm, professional feel, suitable for practical tips and action steps"
-    ],
-    "ending": "Genre: [genre]; Tempo: [BPM]; Mood: satisfying, uplifting, conclusive; Instruments: [instruments]; Style: resolving outro, call-to-action energy, professional fade out, 30-60 seconds, leaves viewer feeling inspired"
-  },
-  "description": "YouTube動画説明欄のテキスト（3〜5行）。視聴者が検索しやすいキーワードを自然に含め、動画の内容を簡潔に説明し、末尾にチャンネル登録を促す一文を入れること。ハッシュタグも3〜5個含めること。"
-}
-\`\`\`
-
-重要：
-- scriptは必ず10000文字以上の詳細な台本にすること。各セクションを具体的なエピソード・実例・数字で詳しく展開すること
-- 話し言葉で、視聴者に直接語りかけるスタイル（「〜ですよね」「〜してみてください」など）
-- 専門用語は分かりやすく説明し、初心者でも理解できるように
-- Midjourneyプロンプトは全て英語で、スタイル・構図・雰囲気が4パターンで異なること
-- SUNOプロンプトは全て英語で、ジャンル・テンポ・ムード・楽器を明記すること
-- 本編BGMは4パターンで、それぞれテンションや雰囲気が異なること
-- descriptionは日本語で、自然な文章として書くこと
-- JSONのみを返し、前後に説明文を加えないこと`;
-
-  try {
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 20000,
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const content = message.content[0];
-    if (content.type !== "text") {
-      return NextResponse.json({ error: "生成に失敗しました" }, { status: 500 });
-    }
-
-    const jsonMatch = content.text.match(/```json\n([\s\S]*?)\n```/) ||
-                      content.text.match(/```\n([\s\S]*?)\n```/);
-    const jsonText = jsonMatch ? jsonMatch[1] : content.text;
-
-    let result;
-    try {
-      result = JSON.parse(jsonText);
-    } catch (parseErr) {
-      console.error("JSON parse error:", parseErr);
-      console.error("Raw text (first 500):", content.text.slice(0, 500));
-      return NextResponse.json({ error: "JSONの解析に失敗しました。再度お試しください。" }, { status: 500 });
-    }
-
-    // Ensure required fields exist
-    if (!result.midjourneyPrompts) result.midjourneyPrompts = [];
-    if (!result.sunoPrompts) result.sunoPrompts = { opening: "", body: [], ending: "" };
-    if (!result.description) result.description = "";
-
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "生成中にエラーが発生しました" }, { status: 500 });
+  const content = message.content[0];
+  if (content.type !== "text") {
+    return NextResponse.json({ error: "生成に失敗しました" }, { status: 500 });
   }
+
+  let jsonText = content.text.trim();
+  // Strip markdown code fences if present
+  jsonText = jsonText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch (e) {
+    console.error("JSON parse error:", e);
+    console.error("Raw text (first 500 chars):", jsonText.slice(0, 500));
+    return NextResponse.json({ error: "JSONの解析に失敗しました。再度お試しください。" }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    titles: Array.isArray(parsed.titles) ? parsed.titles : [],
+    structureIntro: typeof parsed.structureIntro === "string" ? parsed.structureIntro : "",
+    structureBody: Array.isArray(parsed.structureBody) ? parsed.structureBody : [],
+    structureConclusion: typeof parsed.structureConclusion === "string" ? parsed.structureConclusion : "",
+    script: typeof parsed.script === "string" ? parsed.script : "",
+    catchcopies: Array.isArray(parsed.catchcopies) ? parsed.catchcopies : [],
+    midjourneyPrompts: Array.isArray(parsed.midjourneyPrompts) ? parsed.midjourneyPrompts : [],
+    sunoPrompts: Array.isArray(parsed.sunoPrompts) ? parsed.sunoPrompts : [],
+    youtubeDescription: typeof parsed.youtubeDescription === "string" ? parsed.youtubeDescription : "",
+  });
 }

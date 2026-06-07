@@ -1,59 +1,29 @@
-import {
-  Document,
-  Packer,
-  Paragraph,
-  TextRun,
-  HeadingLevel,
-  AlignmentType,
-} from "docx";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
 import { saveAs } from "file-saver";
 
 export interface GeneratedContent {
   titles: string[];
-  structure: {
-    intro: string;
-    body: string[];
-    conclusion: string;
-  };
+  structureIntro: string;
+  structureBody: string[];
+  structureConclusion: string;
   script: string;
   catchcopies: string[];
   midjourneyPrompts: string[];
-  sunoPrompts: {
-    opening: string;
-    body: string[];
-    ending: string;
-  };
-  description: string;
+  sunoPrompts: string[];
+  youtubeDescription: string;
 }
 
-function heading(text: string) {
-  return new Paragraph({
-    text,
-    heading: HeadingLevel.HEADING_1,
-    spacing: { before: 400, after: 200 },
-  });
+function h1(text: string) {
+  return new Paragraph({ text, heading: HeadingLevel.HEADING_1, spacing: { before: 400, after: 200 } });
 }
-
-function heading2(text: string) {
-  return new Paragraph({
-    text,
-    heading: HeadingLevel.HEADING_2,
-    spacing: { before: 200, after: 100 },
-  });
+function h2(text: string) {
+  return new Paragraph({ text, heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 100 } });
 }
-
-function para(text: string) {
-  return new Paragraph({
-    children: [new TextRun({ text, size: 22 })],
-    spacing: { after: 100 },
-  });
+function p(text: string) {
+  return new Paragraph({ children: [new TextRun({ text, size: 22 })], spacing: { after: 100 } });
 }
-
-function numbered(index: number, text: string) {
-  return new Paragraph({
-    children: [new TextRun({ text: `${index}. ${text}`, size: 22 })],
-    spacing: { after: 100 },
-  });
+function li(i: number, text: string) {
+  return new Paragraph({ children: [new TextRun({ text: `${i}. ${text}`, size: 22 })], spacing: { after: 100 } });
 }
 
 export async function downloadWord(content: GeneratedContent, theme: string) {
@@ -68,43 +38,25 @@ export async function downloadWord(content: GeneratedContent, theme: string) {
       alignment: AlignmentType.CENTER,
       spacing: { after: 600 },
     }),
-
-    heading("📌 動画タイトル案"),
-    ...content.titles.map((t, i) => numbered(i + 1, t)),
-
-    heading("📋 動画構成"),
-    heading2("導入"),
-    para(content.structure.intro),
-    heading2("本編"),
-    ...content.structure.body.map((b, i) => numbered(i + 1, b)),
-    heading2("まとめ"),
-    para(content.structure.conclusion),
-
-    heading("📝 本編台本"),
-    ...content.script.split("\n").map((line) => para(line || " ")),
-
-    heading("🎨 サムネイルキャッチコピー案"),
-    ...content.catchcopies.map((c, i) => numbered(i + 1, c)),
-
-    heading("🖼 Midjourneyプロンプト（サムネイル画像用）"),
-    ...content.midjourneyPrompts.map((p, i) => numbered(i + 1, p)),
-
-    heading("🎵 SUNO BGMプロンプト"),
-    heading2("オープニング"),
-    para(content.sunoPrompts.opening),
-    heading2("本編BGM"),
-    ...content.sunoPrompts.body.map((b, i) => numbered(i + 1, b)),
-    heading2("エンディング"),
-    para(content.sunoPrompts.ending),
-
-    heading("📄 YouTube動画説明欄"),
-    ...content.description.split("\n").map((line) => para(line || " ")),
+    h1("📌 動画タイトル案"),
+    ...content.titles.map((t, i) => li(i + 1, t)),
+    h1("📋 動画構成"),
+    h2("導入"), p(content.structureIntro),
+    h2("本編"), ...content.structureBody.map((b, i) => li(i + 1, b)),
+    h2("まとめ"), p(content.structureConclusion),
+    h1("📝 本編台本"),
+    ...content.script.split("\n").map((line) => p(line || " ")),
+    h1("🎨 サムネイルキャッチコピー案"),
+    ...content.catchcopies.map((c, i) => li(i + 1, c)),
+    h1("🖼 Midjourneyプロンプト"),
+    ...content.midjourneyPrompts.map((mp, i) => li(i + 1, mp)),
+    h1("🎵 SUNO BGMプロンプト"),
+    ...content.sunoPrompts.map((sp, i) => li(i + 1, sp)),
+    h1("📄 YouTube動画説明欄"),
+    ...content.youtubeDescription.split("\n").map((line) => p(line || " ")),
   ];
 
-  const doc = new Document({
-    sections: [{ properties: {}, children }],
-  });
-
+  const doc = new Document({ sections: [{ properties: {}, children }] });
   const blob = await Packer.toBlob(doc);
   saveAs(blob, `台本_${theme.slice(0, 30)}.docx`);
 }
