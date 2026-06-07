@@ -1,23 +1,43 @@
 "use client";
 
 import { useState } from "react";
-import { downloadWord } from "@/lib/generateWord";
+import { downloadWord, type GeneratedContent } from "@/lib/generateWord";
 
-interface GeneratedContent {
-  titles: string[];
-  structure: {
-    intro: string;
-    body: string[];
-    conclusion: string;
-  };
-  script: string;
-  catchcopies: string[];
-  midjourneyPrompts: string[];
-  sunoPrompts: {
-    opening: string;
-    body: string[];
-    ending: string;
-  };
+function buildAllText(result: GeneratedContent): string {
+  const lines: string[] = [];
+
+  lines.push("=== 動画タイトル案 ===");
+  result.titles.forEach((t, i) => lines.push(`${i + 1}. ${t}`));
+
+  lines.push("\n=== 動画構成 ===");
+  lines.push("[導入]");
+  lines.push(result.structure.intro);
+  lines.push("[本編]");
+  result.structure.body.forEach((b, i) => lines.push(`${i + 1}. ${b}`));
+  lines.push("[まとめ]");
+  lines.push(result.structure.conclusion);
+
+  lines.push("\n=== 本編台本 ===");
+  lines.push(result.script);
+
+  lines.push("\n=== サムネイルキャッチコピー案 ===");
+  result.catchcopies.forEach((c, i) => lines.push(`${i + 1}. ${c}`));
+
+  lines.push("\n=== Midjourneyプロンプト ===");
+  result.midjourneyPrompts.forEach((p, i) => lines.push(`Pattern ${i + 1}: ${p}`));
+
+  lines.push("\n=== SUNO BGMプロンプト ===");
+  lines.push("[オープニング]");
+  lines.push(result.sunoPrompts.opening);
+  lines.push("[本編BGM]");
+  result.sunoPrompts.body.forEach((b, i) => lines.push(`Body ${i + 1}: ${b}`));
+  lines.push("[エンディング]");
+  lines.push(result.sunoPrompts.ending);
+
+  lines.push("\n=== YouTube動画説明欄 ===");
+  lines.push(result.description);
+
+  return lines.join("\n");
 }
 
 export default function Home() {
@@ -27,7 +47,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GeneratedContent | null>(null);
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [copiedScript, setCopiedScript] = useState(false);
+  const [copiedAll, setCopiedAll] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -51,11 +72,18 @@ export default function Home() {
     }
   }
 
-  async function handleCopy() {
+  async function handleCopyScript() {
     if (!result) return;
     await navigator.clipboard.writeText(result.script);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopiedScript(true);
+    setTimeout(() => setCopiedScript(false), 2000);
+  }
+
+  async function handleCopyAll() {
+    if (!result) return;
+    await navigator.clipboard.writeText(buildAllText(result));
+    setCopiedAll(true);
+    setTimeout(() => setCopiedAll(false), 2000);
   }
 
   async function handleDownload() {
@@ -134,12 +162,19 @@ export default function Home() {
 
         {result && (
           <div className="mt-8 space-y-6">
-            <div className="flex gap-3 justify-end">
+            {/* Action buttons */}
+            <div className="flex flex-wrap gap-3 justify-end">
               <button
-                onClick={handleCopy}
+                onClick={handleCopyScript}
                 className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-4 py-2 rounded-lg text-sm transition-colors"
               >
-                {copied ? "✅ コピーしました" : "📋 台本をコピー"}
+                {copiedScript ? "✅ コピーしました" : "📋 台本をコピー"}
+              </button>
+              <button
+                onClick={handleCopyAll}
+                className="flex items-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+              >
+                {copiedAll ? "✅ コピーしました" : "📋 全文一括コピー"}
               </button>
               <button
                 onClick={handleDownload}
@@ -192,34 +227,40 @@ export default function Home() {
               </ol>
             </Section>
 
-            <Section title="🖼 Midjourneyプロンプト（サムネイル画像用）">
+            <Section title="🖼 Midjourneyプロンプト（サムネイル画像用・英語4パターン）">
               <div className="space-y-3">
                 {result.midjourneyPrompts.map((p, i) => (
                   <div key={i} className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                    <span className="text-xs font-semibold text-purple-600 block mb-1">プロンプト {i + 1}</span>
-                    <p className="text-sm text-gray-800 font-mono">{p}</p>
+                    <span className="text-xs font-semibold text-purple-600 block mb-1">Pattern {i + 1}</span>
+                    <p className="text-sm text-gray-800 font-mono break-all">{p}</p>
                   </div>
                 ))}
               </div>
             </Section>
 
-            <Section title="🎵 SUNO BGMプロンプト">
+            <Section title="🎵 SUNO BGMプロンプト（英語）">
               <div className="space-y-3">
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                  <span className="text-xs font-semibold text-orange-600 block mb-1">オープニング</span>
-                  <p className="text-sm text-gray-800">{result.sunoPrompts.opening}</p>
+                  <span className="text-xs font-semibold text-orange-600 block mb-1">Opening（オープニング）</span>
+                  <p className="text-sm text-gray-800 font-mono break-all">{result.sunoPrompts.opening}</p>
                 </div>
                 {result.sunoPrompts.body.map((b, i) => (
                   <div key={i} className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                    <span className="text-xs font-semibold text-orange-600 block mb-1">本編 BGM {i + 1}</span>
-                    <p className="text-sm text-gray-800">{b}</p>
+                    <span className="text-xs font-semibold text-orange-600 block mb-1">Body BGM {i + 1}（本編BGM {i + 1}）</span>
+                    <p className="text-sm text-gray-800 font-mono break-all">{b}</p>
                   </div>
                 ))}
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                  <span className="text-xs font-semibold text-orange-600 block mb-1">エンディング</span>
-                  <p className="text-sm text-gray-800">{result.sunoPrompts.ending}</p>
+                  <span className="text-xs font-semibold text-orange-600 block mb-1">Ending（エンディング）</span>
+                  <p className="text-sm text-gray-800 font-mono break-all">{result.sunoPrompts.ending}</p>
                 </div>
               </div>
+            </Section>
+
+            <Section title="📄 YouTube動画説明欄">
+              <pre className="whitespace-pre-wrap text-sm text-gray-800 leading-relaxed font-sans">
+                {result.description}
+              </pre>
             </Section>
           </div>
         )}

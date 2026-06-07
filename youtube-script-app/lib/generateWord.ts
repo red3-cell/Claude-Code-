@@ -8,7 +8,7 @@ import {
 } from "docx";
 import { saveAs } from "file-saver";
 
-interface GeneratedContent {
+export interface GeneratedContent {
   titles: string[];
   structure: {
     intro: string;
@@ -23,6 +23,7 @@ interface GeneratedContent {
     body: string[];
     ending: string;
   };
+  description: string;
 }
 
 function heading(text: string) {
@@ -95,6 +96,9 @@ export async function downloadWord(content: GeneratedContent, theme: string) {
     ...content.sunoPrompts.body.map((b, i) => numbered(i + 1, b)),
     heading2("エンディング"),
     para(content.sunoPrompts.ending),
+
+    heading("📄 YouTube動画説明欄"),
+    ...content.description.split("\n").map((line) => para(line || " ")),
   ];
 
   const doc = new Document({
